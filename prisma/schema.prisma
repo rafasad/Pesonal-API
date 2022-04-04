@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name         String
+  last_name          String
+  email              String            @unique
+  password           String
+  bio                String?
+  avatar             Image?            @relation("avatar_image", fields: [avatar_image], references: [id])
+  avatar_image       String?           @unique @map("avatar_image_id") @db.Uuid
+  students           StudentsTeacher[] @relation("teacher")
+  teachers           StudentsTeacher[] @relation("student")
+  exercise           Exercise[]
+  roles              String[]
+  reset_token        String?
+  expire_reset_token DateTime?
+  created_at         DateTime          @default(now())
+  updated_at         DateTime          @updatedAt
+  deleted_at         DateTime?
+
+  UserToken UserToken[] @relation("user")
+  @@map("users")
+}
+
+model StudentsTeacher {
+  student    User   @relation("student", fields: [student_id], references: [id])
+  student_id String @db.Uuid
+  teacher    User   @relation("teacher", fields: [teacher_id], references: [id])
+  teacher_id String @db.Uuid
+
+
+  @@id([student_id, teacher_id])
+  @@map("students_teacher")
+}
+
+model Category {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String               @unique
+  description          String?
+  is_global            Boolean              @default(false)
+  exercises_categories ExerciseCategories[]
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+
+  @@map("categories")
+}
+
+model ExerciseCategories {
+  category_id String @db.Uuid
+  exercise_id String @db.Uuid
+
+  category Category @relation(fields: [category_id], references: [id])
+  exercise Exercise @relation(fields: [exercise_id], references: [id])
+
+  @@id([category_id, exercise_id])
+  @@map("exercise_categories")
+}
+
+model Exercise {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String
+  description          String?
+  video_url            String?
+  teacher              User?                @relation(fields: [teacher_id], references: [id])
+  teacher_id           String?              @db.Uuid
+  exercises_categories ExerciseCategories[]
+  images               Image[]
+  deleted_at           DateTime?
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+
+  @@map("exercises")
+}
+
+model Image {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  original_name   String
+  name            String
+  extension       String
+  type            String
+  path            String
+  avatar_image_id User?     @relation("avatar_image")
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  exercise        Exercise? @relation(fields: [exercise_id], references: [id])
+  exercise_id     String?   @db.Uuid
+
+  @@map("images")
+}
+
+model UserToken {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String @unique @db.Uuid
+  user          User   @relation("user", fields: [user_id], references: [id])
+  token         String
+  refresh_token String
+
+  @@map("user_token")
+}
